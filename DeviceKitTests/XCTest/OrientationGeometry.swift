@@ -21,22 +21,10 @@ struct OrientationGeometry {
         let app = RunningApp.getForegroundApp()
             ?? XCUIApplication(bundleIdentifier: springboardBundleId)
 
-        var size = app.frame.size
-        if size.width <= 0 || size.height <= 0 {
-            NSLog("Foreground app has no frame, falling back to SpringBoard.")
-            size = XCUIApplication(bundleIdentifier: springboardBundleId).frame.size
-        }
-
         let windows = isMultiDisplay() ? appWindows(of: app) : []
         let displayID = secondaryDisplayID(of: app, windows: windows)
-
-        // springboard reports the cover display's frame even when unfolded
-        if let displayID {
-            let displaySizes = windows.filter { $0.displayID == displayID }.map(\.size)
-            if !displaySizes.contains(size), let displaySize = mostCommon(displaySizes) {
-                size = displaySize
-            }
-        }
+        let size = displayID.map { secondaryDisplaySize(of: app, displayID: $0, windows: windows) }
+            ?? mainDisplayPortraitSize()
 
         return OrientationGeometry(
             portraitWidth: min(size.width, size.height),
@@ -44,6 +32,56 @@ struct OrientationGeometry {
             orientation: touchOrientation(of: app),
             displayID: displayID
         )
+    }
+
+    // app frames don't describe the display: iPadOS 15 springboard reports a
+    // square frame in landscape, and multitasking apps are smaller than the screen.
+    // UIScreen won't do either: the runner has no launch screen, so it runs
+    // letterboxed and sees a legacy size. a screenshot has the real size; the
+    // display never changes, so take one once.
+    // ponytail: measured once per runner, restart the runner after changing Display Zoom
+    static func mainDisplayPortraitSize() -> CGSize {
+        measuredMainDisplayPortraitSize
+    }
+
+    // the main display, turned the way springboard is. the size comes from the
+    // display; springboard's frame only tells the orientation, and on iPadOS 15
+    // it is square in landscape, so the device orientation decides then
+    static func springboardSize() -> CGSize {
+        let portrait = mainDisplayPortraitSize()
+        let frame = XCUIApplication(bundleIdentifier: springboardBundleId).frame.size
+        let isLandscape = frame.width == frame.height
+            ? XCUIDevice.shared.orientation.isLandscape
+            : frame.width > frame.height
+        if isLandscape {
+            return CGSize(width: portrait.height, height: portrait.width)
+        }
+        return portrait
+    }
+
+    private static let measuredMainDisplayPortraitSize: CGSize = {
+        let size = XCUIScreen.main.screenshot().image.size
+        NSLog("Main display measured at \(size.width)x\(size.height) points.")
+        return CGSize(width: min(size.width, size.height), height: max(size.width, size.height))
+    }()
+
+    // springboard reports the cover display's frame even when unfolded
+    private static func secondaryDisplaySize(
+        of app: XCUIApplication,
+        displayID: UInt64,
+        windows: [AppWindow]
+    ) -> CGSize {
+        var size = app.frame.size
+        if size.width <= 0 || size.height <= 0 {
+            NSLog("Foreground app has no frame, falling back to SpringBoard.")
+            size = XCUIApplication(bundleIdentifier: springboardBundleId).frame.size
+        }
+
+        let displaySizes = windows.filter { $0.displayID == displayID }.map(\.size)
+        if !displaySizes.contains(size), let displaySize = mostCommon(displaySizes) {
+            return displaySize
+        }
+        return size
     }
 
     func touchPoint(for point: CGPoint) -> CGPoint {
