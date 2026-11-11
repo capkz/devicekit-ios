@@ -2,6 +2,8 @@ name: IPA
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ fast-input ]
 
 permissions:
   contents: read
