@@ -185,6 +185,7 @@ struct IOGestureMethodHandler: RPCMethodHandler {
 
         logger.info("Synthesizing gesture with \(fingerActions.count) finger path(s)")
         try await RunnerDaemonProxy().synthesize(eventRecord: eventRecord)
+        OrientationGeometry.refreshIfStale()
     }
 
     private func buildFingerPath(

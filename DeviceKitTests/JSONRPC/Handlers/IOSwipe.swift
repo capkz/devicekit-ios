@@ -61,5 +61,7 @@ struct IOSwipeMethodHandler: RPCMethodHandler {
         _ = eventRecord.addSwipeEvent(start: start, end: end, duration: duration)
 
         try await RunnerDaemonProxy().synthesize(eventRecord: eventRecord)
+
+        OrientationGeometry.refreshIfStale()
     }
 }

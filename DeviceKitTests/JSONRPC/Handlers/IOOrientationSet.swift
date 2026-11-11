@@ -29,6 +29,7 @@ struct IOOrientationSetMethodHandler: RPCMethodHandler {
         let start = Date()
         logger.info("[Start] Setting orientation to: \(request.orientation)")
         XCUIDevice.shared.orientation = target
+        OrientationGeometry.invalidate()
         let duration = Date().timeIntervalSince(start)
         logger.info("[Done] Setting orientation took \(duration)")
 

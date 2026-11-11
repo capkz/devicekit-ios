@@ -9,7 +9,7 @@ import UIKit
 final class EventRecord: NSObject {
     let eventRecord: NSObject
 
-    static let defaultTapDuration = 0.1
+    static let defaultTapDuration = 0.05
 
     static let swipeSampleRate: TimeInterval = 60
     static let maxSwipeSamples = 240

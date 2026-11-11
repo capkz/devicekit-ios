@@ -28,6 +28,7 @@ struct IOTapMethodHandler: RPCMethodHandler {
             )
             let start = Date()
             try await RunnerDaemonProxy().synthesize(eventRecord: eventRecord)
+            OrientationGeometry.refreshIfStale()
             let duration = Date().timeIntervalSince(start)
             logger.info("Tapping took \(duration)")
             return .object(["success": .bool(true)])

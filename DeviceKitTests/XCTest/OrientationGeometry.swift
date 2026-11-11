@@ -17,7 +17,38 @@ struct OrientationGeometry {
 
     private static let springboardBundleId = "com.apple.springboard"
 
+    // Computing the geometry costs two accessibility round-trips (foreground app + its frame),
+    // ~200 ms on a real device, and it used to run before every touch. Cache it and refresh it
+    // after touches complete instead, so input is synthesized immediately.
+    @MainActor private static var cached: (geometry: OrientationGeometry, at: Date)?
+    private static let maxAge: TimeInterval = 3
+    private static let refreshAfter: TimeInterval = 1
+
+    @MainActor
     static func current() -> OrientationGeometry {
+        if let cached, Date().timeIntervalSince(cached.at) < maxAge {
+            return cached.geometry
+        }
+        let geometry = compute()
+        cached = (geometry, Date())
+        return geometry
+    }
+
+    // call once a touch has been delivered: refreshes a stale cache off the critical path
+    @MainActor
+    static func refreshIfStale() {
+        guard let cached, Date().timeIntervalSince(cached.at) >= refreshAfter else { return }
+        Task { @MainActor in
+            Self.cached = (compute(), Date())
+        }
+    }
+
+    @MainActor
+    static func invalidate() {
+        cached = nil
+    }
+
+    static func compute() -> OrientationGeometry {
         let app = RunningApp.getForegroundApp()
             ?? XCUIApplication(bundleIdentifier: springboardBundleId)
 
@@ -109,7 +140,7 @@ struct OrientationGeometry {
             return nil
         }
 
-        let geometry = current()
+        let geometry = compute()
         guard geometry.displayID != nil else {
             return nil
         }
