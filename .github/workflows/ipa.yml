@@ -1,0 +1,31 @@
+name: IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, macos-15, macos-15-intel, macos-26-intel]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        submodules: recursive
+    - name: Xcode version
+      run: xcodebuild -version
+    - name: Build unsigned IPA
+      run: make ipa-unsigned
+      env:
+        IPHONEOS_DEPLOYMENT_TARGET: "14.0"
+    - uses: actions/upload-artifact@v5
+      with:
+        name: devicekit-ios-ipa-${{ matrix.runner }}
+        path: build/export/*.ipa
+        retention-days: 7
