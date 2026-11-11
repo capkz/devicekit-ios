@@ -22,6 +22,10 @@ struct IOOrientationSetMethodHandler: RPCMethodHandler {
             target = .portrait
         case "LANDSCAPE":
             target = .landscapeLeft
+        case "LANDSCAPE_RIGHT": // TEMP-VERIFY
+            target = .landscapeRight
+        case "PORTRAIT_UPSIDE_DOWN": // TEMP-VERIFY
+            target = .portraitUpsideDown
         default:
             throw RPCMethodError.invalidParams("Invalid orientation '\(request.orientation)', must be 'PORTRAIT' or 'LANDSCAPE'")
         }
